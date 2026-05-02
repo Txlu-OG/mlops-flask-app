@@ -14,4 +14,3 @@ def test_prediction():
         json={"features": [2, 3, 4, 5]},
     )
     assert response.status_code == 200
-    
