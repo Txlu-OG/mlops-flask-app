@@ -1,0 +1,6 @@
+flask
+numpy
+scikit-learn
+pytest
+flake8
+gunicorn
