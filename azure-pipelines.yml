@@ -4,7 +4,7 @@ trigger:
 variables:
   pythonVersion: "3.10"
   azureServiceConnection: "mlops"
-  webAppName: "mlops-flask-app"
+  webAppName: "txlu-og"
 
 stages:
   - stage: Build_Test
