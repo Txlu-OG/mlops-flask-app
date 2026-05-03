@@ -3,8 +3,8 @@ trigger:
 
 variables:
   pythonVersion: "3.10"
-  azureServiceConnection: "YOUR_SERVICE_CONNECTION_NAME"
-  webAppName: "YOUR_AZURE_APP_SERVICE_NAME"
+  azureServiceConnection: "mlops"
+  webAppName: "mlops-flask-app"
 
 stages:
   - stage: Build_Test
