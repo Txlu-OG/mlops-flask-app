@@ -1,37 +1,70 @@
-# Python package
-# Create and test a Python package on multiple Python versions.
-# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
-# https://docs.microsoft.com/azure/devops/pipelines/languages/python
-
 trigger:
-- main
+  - main
 
-pool:
-  vmImage: ubuntu-latest
+variables:
+  pythonVersion: "3.10"
+  azureServiceConnection: "YOUR_SERVICE_CONNECTION_NAME"
+  webAppName: "YOUR_AZURE_APP_SERVICE_NAME"
 
-strategy:
-  matrix:
-    Python38:
-      python.version: '3.8'
-    Python39:
-      python.version: '3.9'
-    Python310:
-      python.version: '3.10'
-    Python311:
-      python.version: '3.11'
+stages:
+  - stage: Build_Test
+    jobs:
+      - job: Build
+        pool:
+          vmImage: "ubuntu-latest"
 
-steps:
-- task: UsePythonVersion@0
-  inputs:
-    versionSpec: '$(python.version)'
-  displayName: 'Use Python $(python.version)'
+        steps:
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: "$(pythonVersion)"
 
-- script: |
-    python -m pip install --upgrade pip
-    pip install -r requirements.txt
-  displayName: 'Install dependencies'
+          - script: |
+              python -m venv venv
+              source venv/bin/activate
+              python -m pip install --upgrade pip
+              pip install -r requirements.txt
+            displayName: "Install dependencies"
 
-- script: |
-    pip install pytest pytest-azurepipelines
-    pytest
-  displayName: 'pytest'
+          - script: |
+              source venv/bin/activate
+              flake8 . --exclude=venv
+            displayName: "Run linting"
+
+          - script: |
+              source venv/bin/activate
+              pytest
+            displayName: "Run tests"
+
+          - task: ArchiveFiles@2
+            inputs:
+              rootFolderOrFile: "$(System.DefaultWorkingDirectory)"
+              includeRootFolder: false
+              archiveType: "zip"
+              archiveFile: "$(Build.ArtifactStagingDirectory)/app.zip"
+              replaceExistingArchive: true
+
+          - publish: "$(Build.ArtifactStagingDirectory)/app.zip"
+            artifact: drop
+
+  - stage: Deploy
+    dependsOn: Build_Test
+    condition: succeeded()
+    jobs:
+      - deployment: DeployWebApp
+        environment: production
+        pool:
+          vmImage: "ubuntu-latest"
+
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: drop
+
+                - task: AzureWebApp@1
+                  inputs:
+                    azureSubscription: "$(azureServiceConnection)"
+                    appType: "webAppLinux"
+                    appName: "$(webAppName)"
+                    package: "$(Pipeline.Workspace)/drop/app.zip"
